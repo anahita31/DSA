@@ -1,57 +1,78 @@
 import os
 import shutil
+import requests
 
-DIFFICULTY = {
-    1: "Easy",
-    15: "Medium",
-    88: "Easy",
-    125: "Easy",
-    167: "Medium",
-    169: "Easy",
-    217: "Easy",
-    268: "Easy",
-    344: "Easy",
-    414: "Easy",
-    448: "Easy",
-    645: "Easy",
-    792: "Easy",
-    1019: "Easy",
-    1603: "Easy",
-    2917: "Medium",
+GRAPHQL_URL = "https://leetcode.com/graphql"
+
+QUERY = """
+query getQuestion($titleSlug: String!) {
+  question(titleSlug: $titleSlug) {
+    difficulty
+  }
 }
+"""
 
 ROOT = os.path.dirname(os.path.abspath(__file__))
 
-# Create folders if they don't exist
+
+def get_difficulty(slug):
+    try:
+        response = requests.post(
+            GRAPHQL_URL,
+            json={
+                "query": QUERY,
+                "variables": {
+                    "titleSlug": slug
+                }
+            },
+            timeout=10,
+        )
+
+        data = response.json()
+
+        return data["data"]["question"]["difficulty"]
+
+    except Exception as e:
+        print(f"Error fetching {slug}: {e}")
+        return None
+
+
 for folder in ["Easy", "Medium", "Hard"]:
     os.makedirs(os.path.join(ROOT, folder), exist_ok=True)
 
 for item in os.listdir(ROOT):
+
     path = os.path.join(ROOT, item)
 
     if not os.path.isdir(path):
         continue
 
-    if item.startswith(".") or item in ["Easy", "Medium", "Hard"]:
+    if item.startswith("."):
         continue
 
-    try:
-        problem_no = int(item.split("-")[0])
-    except ValueError:
+    if item in ["Easy", "Medium", "Hard"]:
         continue
 
-    difficulty = DIFFICULTY.get(problem_no)
+    parts = item.split("-", 1)
+
+    if len(parts) != 2:
+        continue
+
+    slug = parts[1]
+
+    difficulty = get_difficulty(slug)
 
     if difficulty is None:
-        print(f"Skipping {item} (difficulty unknown)")
+        print(f"Skipping {item}")
         continue
 
     destination = os.path.join(ROOT, difficulty, item)
 
     if os.path.exists(destination):
-        shutil.rmtree(destination)
+        continue
 
     shutil.move(path, destination)
-    print(f"Moved {item} -> {difficulty}")
 
-print("Finished organizing.")
+    print(f"{item} -> {difficulty}")
+
+print("Done!")
