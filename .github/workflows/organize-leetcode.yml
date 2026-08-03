@@ -19,16 +19,21 @@ jobs:
         with:
           python-version: "3.11"
 
-      - run: python organize.py
+      - name: Install Requests
+        run: pip install requests
 
-      - name: Commit changes
+      - name: Organize
+        run: python organize.py
+
+      - name: Commit
         run: |
-          git config --global user.name "github-actions"
-          git config --global user.email "github-actions@github.com"
+          git config user.name github-actions
+          git config user.email github-actions@github.com
 
           git add .
 
-          if ! git diff --cached --quiet; then
-            git commit -m "Auto organize LeetCode"
+          git diff --cached --quiet || git commit -m "Auto organize"
+
+          git push LeetCode"
             git push
           fi
